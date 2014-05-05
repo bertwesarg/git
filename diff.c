@@ -95,6 +95,7 @@ static char diff_colors[][COLOR_MAXLEN] = {
 	GIT_COLOR_BOLD,		/* CONTEXT_BOLD */
 	GIT_COLOR_BOLD_RED,	/* OLD_BOLD */
 	GIT_COLOR_BOLD_GREEN,	/* NEW_BOLD */
+	GIT_COLOR_NORMAL,	/* PATH */
 };
 
 static const char *color_diff_slots[] = {
@@ -120,6 +121,7 @@ static const char *color_diff_slots[] = {
 	[DIFF_CONTEXT_BOLD]	      = "contextBold",
 	[DIFF_FILE_OLD_BOLD]	      = "oldBold",
 	[DIFF_FILE_NEW_BOLD]	      = "newBold",
+	[DIFF_PATHINFO]		      = "path",
 };
 
 define_list_config_array_extra(color_diff_slots, {"plain"});
@@ -4439,6 +4441,7 @@ static void fill_metainfo(struct strbuf *msg,
 			  int use_color)
 {
 	const char *set = diff_get_color(use_color, DIFF_METAINFO);
+	const char *path = diff_get_color(use_color, DIFF_PATHINFO);
 	const char *reset = diff_get_color(use_color, DIFF_RESET);
 	const char *line_prefix = diff_line_prefix(o);
 	struct string_list *more_headers = NULL;
@@ -4449,21 +4452,22 @@ static void fill_metainfo(struct strbuf *msg,
 	case DIFF_STATUS_COPIED:
 		strbuf_addf(msg, "%s%ssimilarity index %d%%",
 			    line_prefix, set, similarity_index(p));
-		strbuf_addf(msg, "%s\n%s%scopy from ",
-			    reset,  line_prefix, set);
+		strbuf_addf(msg, "%s\n%s%scopy from%s %s",
+			    reset,  line_prefix, set, reset, path);
 		quote_c_style(name, msg, NULL, 0);
-		strbuf_addf(msg, "%s\n%s%scopy to ", reset, line_prefix, set);
+		strbuf_addf(msg, "%s\n%s%scopy to%s %s",
+			    reset, line_prefix, set, reset, path);
 		quote_c_style(other, msg, NULL, 0);
 		strbuf_addf(msg, "%s\n", reset);
 		break;
 	case DIFF_STATUS_RENAMED:
 		strbuf_addf(msg, "%s%ssimilarity index %d%%",
 			    line_prefix, set, similarity_index(p));
-		strbuf_addf(msg, "%s\n%s%srename from ",
-			    reset, line_prefix, set);
+		strbuf_addf(msg, "%s\n%s%srename from%s %s",
+			    reset, line_prefix, set, reset, path);
 		quote_c_style(name, msg, NULL, 0);
-		strbuf_addf(msg, "%s\n%s%srename to ",
-			    reset, line_prefix, set);
+		strbuf_addf(msg, "%s\n%s%srename to%s %s",
+			    reset, line_prefix, set, reset, path);
 		quote_c_style(other, msg, NULL, 0);
 		strbuf_addf(msg, "%s\n", reset);
 		break;
@@ -4504,7 +4508,7 @@ static void fill_metainfo(struct strbuf *msg,
 		if (one->mode == two->mode)
 			strbuf_addf(msg, " %06o", one->mode);
 		if (diff_path_in_index) {
-			strbuf_addch(msg, ' ');
+			strbuf_addf(msg, "%s %s", reset, path);
 			quote_c_style(other ? other : name, msg, NULL, 0);
 		}
 		strbuf_addf(msg, "%s\n", reset);

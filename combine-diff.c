@@ -940,6 +940,7 @@ static void show_combined_header(struct combine_diff_path *elem,
 	const char *a_prefix = opt->a_prefix ? opt->a_prefix : "a/";
 	const char *b_prefix = opt->b_prefix ? opt->b_prefix : "b/";
 	const char *c_meta = diff_get_color_opt(opt, DIFF_METAINFO);
+	const char *c_path = diff_get_color_opt(opt, DIFF_PATHINFO);
 	const char *c_reset = diff_get_color_opt(opt, DIFF_RESET);
 	const char *abb;
 	int added = 0;
@@ -961,9 +962,9 @@ static void show_combined_header(struct combine_diff_path *elem,
 	abb = repo_find_unique_abbrev(the_repository, &elem->oid, abbrev);
 	printf("..%s", abb);
 	if (diff_path_in_index)
-		dump_quoted_path(" ", "", elem->path, line_prefix, "", c_reset);
+		dump_quoted_path(" ", "", elem->path, line_prefix, c_path, c_reset);
 	else
-		printf("%s\n", c_reset);
+		printf("\n");
 
 	if (mode_differs) {
 		deleted = !elem->mode;

@@ -451,6 +451,7 @@ enum color_diff {
 	DIFF_CONTEXT_BOLD = 20,
 	DIFF_FILE_OLD_BOLD = 21,
 	DIFF_FILE_NEW_BOLD = 22,
+	DIFF_PATHINFO = 23,
 };
 
 const char *diff_get_color(int diff_use_color, enum color_diff ix);
