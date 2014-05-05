@@ -66,6 +66,8 @@ static int fmt_patch_name_max = FORMAT_PATCH_NAME_MAX_DEFAULT;
 static const char *fmt_pretty;
 static int format_no_prefix;
 
+static int use_diff_ui_config = 1;
+
 static const char * const builtin_log_usage[] = {
 	N_("git log [<options>] [<revision-range>] [[--] <path>...]"),
 	N_("git show [<options>] <object>..."),
@@ -616,7 +618,9 @@ static int git_log_config(const char *var, const char *value,
 		return 0;
 	}
 
-	return git_diff_ui_config(var, value, ctx, cb);
+	return (use_diff_ui_config
+		? git_diff_ui_config
+		: git_diff_basic_config)(var, value, ctx, cb);
 }
 
 int cmd_whatchanged(int argc, const char **argv, const char *prefix)
@@ -2000,6 +2004,7 @@ int cmd_format_patch(int argc, const char **argv, const char *prefix)
 
 	init_log_defaults();
 	init_display_notes(&notes_opt);
+	use_diff_ui_config = 0;
 	git_config(git_format_config, NULL);
 	repo_init_revisions(the_repository, &rev, prefix);
 	git_config(grep_config, &rev.grep_filter);
