@@ -121,6 +121,9 @@ diff.orderFile::
 	If `diff.orderFile` is a relative pathname, it is treated as
 	relative to the top of the working tree.
 
+diff.pathInIndex::
+	Add the path to the end of the index extended header line.
+
 diff.renameLimit::
 	The number of files to consider in the exhaustive portion of
 	copy/rename detection; equivalent to the 'git diff' option

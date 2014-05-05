@@ -69,6 +69,7 @@ static int diff_dirstat_permille_default = 30;
 static struct diff_options default_diff_options;
 static long diff_algorithm;
 static unsigned ws_error_highlight_default = WSEH_NEW;
+int diff_path_in_index = 0;
 
 static char diff_colors[][COLOR_MAXLEN] = {
 	GIT_COLOR_RESET,
@@ -426,6 +427,10 @@ int git_diff_ui_config(const char *var, const char *value,
 		return git_config_string(&diff_word_regex_cfg, var, value);
 	if (!strcmp(var, "diff.orderfile"))
 		return git_config_pathname(&diff_order_file_cfg, var, value);
+	if (!strcmp(var, "diff.pathinindex")) {
+		diff_path_in_index = git_config_bool(var, value);
+		return 0;
+	}
 
 	if (!strcmp(var, "diff.ignoresubmodules")) {
 		if (!value)
@@ -4498,6 +4503,10 @@ static void fill_metainfo(struct strbuf *msg,
 			    diff_abbrev_oid(&two->oid, abbrev));
 		if (one->mode == two->mode)
 			strbuf_addf(msg, " %06o", one->mode);
+		if (diff_path_in_index) {
+			strbuf_addch(msg, ' ');
+			quote_c_style(other ? other : name, msg, NULL, 0);
+		}
 		strbuf_addf(msg, "%s\n", reset);
 	}
 }

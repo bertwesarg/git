@@ -959,7 +959,11 @@ static void show_combined_header(struct combine_diff_path *elem,
 		printf("%s%s", i ? "," : "", abb);
 	}
 	abb = repo_find_unique_abbrev(the_repository, &elem->oid, abbrev);
-	printf("..%s%s\n", abb, c_reset);
+	printf("..%s", abb);
+	if (diff_path_in_index)
+		dump_quoted_path(" ", "", elem->path, line_prefix, "", c_reset);
+	else
+		printf("%s\n", c_reset);
 
 	if (mode_differs) {
 		deleted = !elem->mode;

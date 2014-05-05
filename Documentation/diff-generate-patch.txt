@@ -41,7 +41,7 @@ the file that the rename/copy produces, respectively.
        rename to <path>
        similarity index <number>
        dissimilarity index <number>
-       index <hash>..<hash> <mode>
+       index <hash>..<hash> <mode>[ <path>]
 +
 File modes are printed as 6-digit octal numbers including the file type
 and file permission bits.
@@ -57,7 +57,8 @@ file made it into the new one.
 +
 The index line includes the blob object names before and after the change.
 The <mode> is included if the file mode does not change; otherwise,
-separate lines indicate the old and the new mode.
+separate lines indicate the old and the new mode. The ' <path>' will only
+show up, if the diff.pathInIndex configure option is set.
 
 3.  Pathnames with "unusual" characters are quoted as explained for
     the configuration variable `core.quotePath` (see
