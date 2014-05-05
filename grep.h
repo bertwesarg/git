@@ -36,7 +36,8 @@ enum grep_pat_token {
 	GREP_OPEN_PAREN,
 	GREP_CLOSE_PAREN,
 	GREP_NOT,
-	GREP_OR
+	GREP_OR,
+	GREP_LNO
 };
 
 enum grep_context {
@@ -82,6 +83,7 @@ struct grep_pat {
 	pcre2_general_context *pcre2_general_context;
 	const uint8_t *pcre2_tables;
 	uint32_t pcre2_jit_on;
+	unsigned lno;
 	unsigned fixed:1;
 	unsigned is_fixed:1;
 	unsigned ignore_case:1;
@@ -219,7 +221,7 @@ int grep_buffer(struct grep_opt *opt, const char *buf, unsigned long size);
  * GREP_HEADER_FIELD_MAX should be supplied.
  */
 int grep_next_match(struct grep_opt *opt,
-		    const char *bol, const char *eol,
+		    const char *bol, const char *eol, unsigned lno,
 		    enum grep_context ctx, regmatch_t *pmatch,
 		    enum grep_header_field field, int eflags);
 

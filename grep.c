@@ -570,6 +570,15 @@ static void compile_regexp(struct grep_pat *p, struct grep_opt *opt)
 	}
 }
 
+static void parse_lno(struct grep_pat *p, struct grep_opt *opt)
+{
+	char *eon;
+
+	p->lno = strtoul(p->pattern, &eon, 10);
+	if (*eon || p->lno == 0)
+		die("'%s': Invalid number for line match", p->pattern);
+}
+
 static struct grep_expr *grep_not_expr(struct grep_expr *expr)
 {
 	struct grep_expr *z = xcalloc(1, sizeof(*z));
@@ -612,6 +621,7 @@ static struct grep_expr *compile_pattern_atom(struct grep_pat **list)
 	case GREP_PATTERN: /* atom */
 	case GREP_PATTERN_HEAD:
 	case GREP_PATTERN_BODY:
+	case GREP_LNO:
 		CALLOC_ARRAY(x, 1);
 		x->node = GREP_NODE_ATOM;
 		x->u.atom = p;
@@ -777,6 +787,9 @@ void compile_grep_patterns(struct grep_opt *opt)
 		case GREP_PATTERN_BODY:
 			compile_regexp(p, opt);
 			break;
+		case GREP_LNO:
+			parse_lno(p, opt);
+			break;
 		default:
 			extended = 1;
 			break;
@@ -938,13 +951,31 @@ static struct {
 	{ "reflog ", 7 },
 };
 
+static int match_lno(struct grep_pat *p, const char *bol, const char *eol,
+		     unsigned lno, regmatch_t *pmatch)
+{
+	if (p->lno == lno) {
+		/*
+		 * because coloring will stop at so == eo, match at the end
+		 * of line, so that the whole line can be colored
+		 */
+		pmatch->rm_so = eol - bol;
+		pmatch->rm_eo = eol - bol;
+		return 1;
+	}
+	return 0;
+}
+
 static int headerless_match_one_pattern(struct grep_pat *p,
-					const char *bol, const char *eol,
+					const char *bol, const char *eol, unsigned lno,
 					enum grep_context ctx,
 					regmatch_t *pmatch, int eflags)
 {
 	int hit = 0;
 	const char *start = bol;
+
+	if (p->token == GREP_LNO)
+		return match_lno(p, bol, eol, lno, pmatch);
 
 	if ((p->token != GREP_PATTERN) &&
 	    ((p->token == GREP_PATTERN_HEAD) != (ctx == GREP_CONTEXT_HEAD)))
@@ -1001,7 +1032,7 @@ static int headerless_match_one_pattern(struct grep_pat *p,
 }
 
 static int match_one_pattern(struct grep_pat *p,
-			     const char *bol, const char *eol,
+			     const char *bol, const char *eol, unsigned lno,
 			     enum grep_context ctx, regmatch_t *pmatch,
 			     int eflags)
 {
@@ -1026,12 +1057,12 @@ static int match_one_pattern(struct grep_pat *p,
 		}
 	}
 
-	return headerless_match_one_pattern(p, bol, eol, ctx, pmatch, eflags);
+	return headerless_match_one_pattern(p, bol, eol, lno, ctx, pmatch, eflags);
 }
 
 
 static int match_expr_eval(struct grep_opt *opt, struct grep_expr *x,
-			   const char *bol, const char *eol,
+			   const char *bol, const char *eol, unsigned lno,
 			   enum grep_context ctx, ssize_t *col,
 			   ssize_t *icol, int collect_hits)
 {
@@ -1044,7 +1075,7 @@ static int match_expr_eval(struct grep_opt *opt, struct grep_expr *x,
 	case GREP_NODE_ATOM:
 		{
 			regmatch_t tmp;
-			h = match_one_pattern(x->u.atom, bol, eol, ctx,
+			h = match_one_pattern(x->u.atom, bol, eol, lno, ctx,
 					      &tmp, 0);
 			if (h && (*col < 0 || tmp.rm_so < *col))
 				*col = tmp.rm_so;
@@ -1056,12 +1087,12 @@ static int match_expr_eval(struct grep_opt *opt, struct grep_expr *x,
 		/*
 		 * Upon visiting a GREP_NODE_NOT, col and icol become swapped.
 		 */
-		h = !match_expr_eval(opt, x->u.unary, bol, eol, ctx, icol, col,
-				     0);
+		h = !match_expr_eval(opt, x->u.unary, bol, eol, lno, ctx, icol,
+				     col, 0);
 		break;
 	case GREP_NODE_AND:
-		h = match_expr_eval(opt, x->u.binary.left, bol, eol, ctx, col,
-				    icol, 0);
+		h = match_expr_eval(opt, x->u.binary.left, bol, eol, lno, ctx,
+				    col, icol, 0);
 		if (h || opt->columnnum) {
 			/*
 			 * Don't short-circuit AND when given --column, since a
@@ -1069,7 +1100,7 @@ static int match_expr_eval(struct grep_opt *opt, struct grep_expr *x,
 			 * this case, see the below comment.
 			 */
 			h &= match_expr_eval(opt, x->u.binary.right, bol, eol,
-					     ctx, col, icol, 0);
+					     lno, ctx, col, icol, 0);
 		}
 		break;
 	case GREP_NODE_OR:
@@ -1080,16 +1111,16 @@ static int match_expr_eval(struct grep_opt *opt, struct grep_expr *x,
 			 * child that would produce an earlier match.
 			 */
 			return (match_expr_eval(opt, x->u.binary.left, bol, eol,
-						ctx, col, icol, 0) ||
+						lno, ctx, col, icol, 0) ||
 				match_expr_eval(opt, x->u.binary.right, bol,
-						eol, ctx, col, icol, 0));
+						eol, lno, ctx, col, icol, 0));
 		}
-		h = match_expr_eval(opt, x->u.binary.left, bol, eol, ctx, col,
-				    icol, 0);
+		h = match_expr_eval(opt, x->u.binary.left, bol, eol, lno, ctx,
+				    col, icol, 0);
 		if (collect_hits)
 			x->u.binary.left->hit |= h;
-		h |= match_expr_eval(opt, x->u.binary.right, bol, eol, ctx, col,
-				     icol, collect_hits);
+		h |= match_expr_eval(opt, x->u.binary.right, bol, eol, lno, ctx,
+				     col, icol, collect_hits);
 		break;
 	default:
 		die("Unexpected node type (internal error) %d", x->node);
@@ -1100,16 +1131,17 @@ static int match_expr_eval(struct grep_opt *opt, struct grep_expr *x,
 }
 
 static int match_expr(struct grep_opt *opt,
-		      const char *bol, const char *eol,
+		      const char *bol, const char *eol, unsigned lno,
 		      enum grep_context ctx, ssize_t *col,
 		      ssize_t *icol, int collect_hits)
 {
 	struct grep_expr *x = opt->pattern_expression;
-	return match_expr_eval(opt, x, bol, eol, ctx, col, icol, collect_hits);
+	return match_expr_eval(opt, x, bol, eol, lno, ctx, col, icol,
+			      collect_hits);
 }
 
 static int match_line(struct grep_opt *opt,
-		      const char *bol, const char *eol,
+		      const char *bol, const char *eol, unsigned lno,
 		      ssize_t *col, ssize_t *icol,
 		      enum grep_context ctx, int collect_hits)
 {
@@ -1117,13 +1149,13 @@ static int match_line(struct grep_opt *opt,
 	int hit = 0;
 
 	if (opt->pattern_expression)
-		return match_expr(opt, bol, eol, ctx, col, icol,
+		return match_expr(opt, bol, eol, lno, ctx, col, icol,
 				  collect_hits);
 
 	/* we do not call with collect_hits without being extended */
 	for (p = opt->pattern_list; p; p = p->next) {
 		regmatch_t tmp;
-		if (match_one_pattern(p, bol, eol, ctx, &tmp, 0)) {
+		if (match_one_pattern(p, bol, eol, lno, ctx, &tmp, 0)) {
 			hit |= 1;
 			if (!opt->columnnum) {
 				/*
@@ -1142,13 +1174,13 @@ static int match_line(struct grep_opt *opt,
 }
 
 static int match_next_pattern(struct grep_pat *p,
-			      const char *bol, const char *eol,
+			      const char *bol, const char *eol, unsigned lno,
 			      enum grep_context ctx,
 			      regmatch_t *pmatch, int eflags)
 {
 	regmatch_t match;
 
-	if (!headerless_match_one_pattern(p, bol, eol, ctx, &match, eflags))
+	if (!headerless_match_one_pattern(p, bol, eol, lno, ctx, &match, eflags))
 		return 0;
 	if (match.rm_so < 0 || match.rm_eo < 0)
 		return 0;
@@ -1164,7 +1196,7 @@ static int match_next_pattern(struct grep_pat *p,
 }
 
 int grep_next_match(struct grep_opt *opt,
-		    const char *bol, const char *eol,
+		    const char *bol, const char *eol, unsigned lno,
 		    enum grep_context ctx, regmatch_t *pmatch,
 		    enum grep_header_field field, int eflags)
 {
@@ -1184,7 +1216,8 @@ int grep_next_match(struct grep_opt *opt,
 				/* fall thru */
 			case GREP_PATTERN: /* atom */
 			case GREP_PATTERN_BODY:
-				hit |= match_next_pattern(p, bol, eol, ctx,
+			case GREP_LNO:
+				hit |= match_next_pattern(p, bol, eol, lno, ctx,
 							  pmatch, eflags);
 				break;
 			default:
@@ -1273,7 +1306,7 @@ static void show_line(struct grep_opt *opt,
 			else if (sign == '=')
 				line_color = opt->colors[GREP_COLOR_FUNCTION];
 		}
-		while (grep_next_match(opt, bol, eol, ctx, &match,
+		while (grep_next_match(opt, bol, eol, lno, ctx, &match,
 				       GREP_HEADER_FIELD_MAX, eflags)) {
 			if (match.rm_so == match.rm_eo)
 				break;
@@ -1663,7 +1696,7 @@ static int grep_source_1(struct grep_opt *opt, struct grep_source *gs, int colle
 		if ((ctx == GREP_CONTEXT_HEAD) && (eol == bol))
 			ctx = GREP_CONTEXT_BODY;
 
-		hit = match_line(opt, bol, eol, &col, &icol, ctx, collect_hits);
+		hit = match_line(opt, bol, eol, lno, &col, &icol, ctx, collect_hits);
 
 		if (collect_hits)
 			goto next_line;

@@ -888,6 +888,14 @@ static int pattern_callback(const struct option *opt, const char *arg,
 	return 0;
 }
 
+static int lno_pattern_callback(const struct option *opt, const char *arg,
+				int unset)
+{
+	struct grep_opt *grep_opt = opt->value;
+	append_grep_pattern(grep_opt, arg, "-@ option", 0, GREP_LNO);
+	return 0;
+}
+
 int cmd_grep(int argc, const char **argv, const char *prefix)
 {
 	int hit = 0;
@@ -993,6 +1001,8 @@ int cmd_grep(int argc, const char **argv, const char *prefix)
 			N_("read patterns from file"), file_callback),
 		OPT_CALLBACK_F('e', NULL, &opt, N_("pattern"),
 			N_("match <pattern>"), PARSE_OPT_NONEG, pattern_callback),
+		OPT_CALLBACK_F('@', NULL, &opt, N_("line"),
+			N_("match <line>"), PARSE_OPT_NONEG, lno_pattern_callback),
 		OPT_CALLBACK_F(0, "and", &opt, NULL,
 			N_("combine patterns specified with -e"),
 			PARSE_OPT_NOARG | PARSE_OPT_NONEG, and_callback),

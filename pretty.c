@@ -473,7 +473,7 @@ static void append_line_with_color(struct strbuf *sb, struct grep_opt *opt,
 	line_color = opt->colors[GREP_COLOR_SELECTED];
 	match_color = opt->colors[GREP_COLOR_MATCH_SELECTED];
 
-	while (grep_next_match(opt, buf, eol, ctx, &match, field, eflags)) {
+	while (grep_next_match(opt, buf, eol, 0, ctx, &match, field, eflags)) {
 		if (match.rm_so == match.rm_eo)
 			break;
 
