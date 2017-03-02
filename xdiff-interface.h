@@ -71,4 +71,7 @@ int xdiff_compare_lines(const char *l1, long s1,
  */
 unsigned long xdiff_hash_string(const char *s, size_t len, long flags);
 
+int xdi_merge(mmfile_t *orig, mmfile_t *mf1, mmfile_t *mf2,
+	      xmparam_t const *xmp, mmbuffer_t *result);
+
 #endif

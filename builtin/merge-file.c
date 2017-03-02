@@ -67,6 +67,7 @@ int cmd_merge_file(int argc, const char **argv, const char *prefix)
 		OPT_SET_INT(0, "diff3", &xmp.style, N_("use a diff3 based merge"), XDL_MERGE_DIFF3),
 		OPT_SET_INT(0, "zdiff3", &xmp.style, N_("use a zealous diff3 based merge"),
 				XDL_MERGE_ZEALOUS_DIFF3),
+		OPT_SET_INT(0, "cdiff", &xmp.style, N_("use a cdiff based merge"), XDL_MERGE_CDIFF),
 		OPT_SET_INT(0, "ours", &xmp.favor, N_("for conflicts, use our version"),
 			    XDL_MERGE_FAVOR_OURS),
 		OPT_SET_INT(0, "theirs", &xmp.favor, N_("for conflicts, use their version"),
@@ -142,7 +143,7 @@ int cmd_merge_file(int argc, const char **argv, const char *prefix)
 	xmp.ancestor = names[1];
 	xmp.file1 = names[0];
 	xmp.file2 = names[2];
-	ret = xdl_merge(mmfs + 1, mmfs + 0, mmfs + 2, &xmp, &result);
+	ret = xdi_merge(mmfs + 1, mmfs + 0, mmfs + 2, &xmp, &result);
 
 	if (ret >= 0) {
 		if (object_id && !to_stdout) {

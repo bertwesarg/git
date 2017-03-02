@@ -8,6 +8,7 @@
 #include "xdiff/xtypes.h"
 #include "xdiff/xdiffi.h"
 #include "xdiff/xutils.h"
+#include "cdiff-conflict.h"
 
 struct xdiff_emit_state {
 	xdiff_emit_hunk_fn hunk_fn;
@@ -317,6 +318,8 @@ int git_xmerge_config(const char *var, const char *value,
 			git_xmerge_style = XDL_MERGE_DIFF3;
 		else if (!strcmp(value, "zdiff3"))
 			git_xmerge_style = XDL_MERGE_ZEALOUS_DIFF3;
+		else if (!strcmp(value, "cdiff"))
+			git_xmerge_style = XDL_MERGE_CDIFF;
 		else if (!strcmp(value, "merge"))
 			git_xmerge_style = 0;
 		/*
@@ -329,4 +332,38 @@ int git_xmerge_config(const char *var, const char *value,
 		return 0;
 	}
 	return git_default_config(var, value, ctx, cb);
+}
+
+int xdi_merge(mmfile_t *orig, mmfile_t *mf1, mmfile_t *mf2,
+	      xmparam_t const *xmp, mmbuffer_t *result)
+{
+	xmparam_t new_xmp = *xmp;
+	int is_cdiff_style = 0;
+	int merge_status;
+
+	/*
+	 * for cdiff conflict style, we need the result of diff3 which
+	 * can be post-processed with the cdiff filter
+	 */
+	if (new_xmp.style == XDL_MERGE_CDIFF) {
+		is_cdiff_style = 1;
+		new_xmp.style = XDL_MERGE_DIFF3;
+	}
+
+	merge_status = xdl_merge(orig, mf1, mf2, &new_xmp, result);
+
+	/* no need for post-process if there are errors or no conflicts */
+	if (merge_status <= 0 || !is_cdiff_style)
+		return merge_status;
+
+	/*
+	 * post-process for cdiff conflict
+	 */
+	cdiff_conflict_filter(result, xmp->marker_size);
+
+	/*
+	 * cdiff-filter will not alter the conflict count, and will return
+	 * the unmodified diff3 merge result in case of error
+	 */
+	return merge_status;
 }

@@ -25,6 +25,8 @@
 /git-bugreport
 /git-bundle
 /git-cat-file
+/git-cdiff
+/git-cdiff-conflict-filter
 /git-check-attr
 /git-check-ignore
 /git-check-mailmap

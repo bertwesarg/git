@@ -135,7 +135,7 @@ static enum ll_merge_result ll_xdl_merge(const struct ll_merge_driver *drv_unuse
 	xmp.ancestor = orig_name;
 	xmp.file1 = name1;
 	xmp.file2 = name2;
-	status = xdl_merge(orig, src1, src2, &xmp, result);
+	status = xdi_merge(orig, src1, src2, &xmp, result);
 	ret = (status > 0) ? LL_MERGE_CONFLICT : status;
 	return ret;
 }

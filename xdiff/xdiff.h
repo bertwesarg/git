@@ -67,6 +67,11 @@ extern "C" {
 /* merge output styles */
 #define XDL_MERGE_DIFF3 1
 #define XDL_MERGE_ZEALOUS_DIFF3 2
+/*
+ * cdiff this is a pseudo style, which is implemented as an post-processing
+ * filter on top of the diff3 style
+ */
+#define XDL_MERGE_CDIFF 3
 
 typedef struct s_mmfile {
 	char *ptr;
