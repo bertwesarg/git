@@ -38,6 +38,7 @@ static char const * const grep_usage[] = {
 };
 
 static int recurse_submodules;
+static int ignore_skipped;
 
 static int num_threads;
 
@@ -316,6 +317,9 @@ static int grep_cmd_config(const char *var, const char *value,
 	if (!strcmp(var, "submodule.recurse"))
 		recurse_submodules = git_config_bool(var, value);
 
+	if (!strcmp(var, "core.ignoreskipped"))
+		ignore_skipped = git_config_bool(var, value);
+
 	return st;
 }
 
@@ -583,6 +587,9 @@ static int grep_cache(struct grep_opt *opt,
 		    match_pathspec(repo->index, pathspec, name.buf, name.len, 0, NULL,
 				   S_ISDIR(ce->ce_mode) ||
 				   S_ISGITLINK(ce->ce_mode))) {
+
+			if (ignore_skipped && ce_skip_worktree(ce))
+				continue;
 			/*
 			 * If CE_VALID is on, we assume worktree file and its
 			 * cache entry are identical, even if worktree file has
