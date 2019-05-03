@@ -44,6 +44,7 @@ static int show_eol;
 static int recurse_submodules;
 static int skipping_duplicates;
 static int show_sparse_dirs;
+static int ignore_skipped;
 
 static const char *prefix;
 static int max_prefix_len;
@@ -427,6 +428,8 @@ static void show_files(struct repository *repo, struct dir_struct *dir)
 
 		construct_fullname(&fullname, repo, ce);
 
+		if (ignore_skipped && ce_skip_worktree(ce))
+			continue;
 		if ((dir->flags & DIR_SHOW_IGNORED) &&
 			!ce_excluded(dir, repo->index, fullname.buf, ce))
 			continue;
@@ -569,6 +572,15 @@ static int option_parse_exclude_standard(const struct option *opt,
 	return 0;
 }
 
+static int git_ls_files_config(const char *var, const char *value,
+			       const struct config_context *ctx, void *cb)
+{
+	if (!strcmp(var, "core.ignoreskipped"))
+		ignore_skipped = git_config_bool(var, value);
+
+	return git_default_config(var, value, ctx, cb);
+}
+
 int cmd_ls_files(int argc, const char **argv, const char *cmd_prefix)
 {
 	int require_work_tree = 0, show_tag = 0, i;
@@ -655,7 +667,7 @@ int cmd_ls_files(int argc, const char **argv, const char *cmd_prefix)
 	prefix = cmd_prefix;
 	if (prefix)
 		prefix_len = strlen(prefix);
-	git_config(git_default_config, NULL);
+	git_config(git_ls_files_config, NULL);
 
 	if (repo_read_index(the_repository) < 0)
 		die("index file corrupt");
