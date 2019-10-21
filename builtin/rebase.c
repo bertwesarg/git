@@ -1002,6 +1002,26 @@ static int parse_opt_rebase_merges(const struct option *opt, const char *arg, in
 	return 0;
 }
 
+static int numrevs_callback(const struct option *opt, const char *arg,
+			    int unset)
+{
+	int *numrevsp = opt->value;
+	const char *endp;
+	int value;
+
+	BUG_ON_OPT_NEG(unset);
+
+	value = strtol(arg, (char **)&endp, 10);
+	if (*endp) { // should not fail, its OPTION_NUMBER
+		return error(_("switch `%c' expects a numerical value"),
+			     opt->short_name);
+	}
+
+	*numrevsp = value;
+
+	return 0;
+}
+
 static void NORETURN error_on_missing_default_upstream(void)
 {
 	struct branch *current_branch = branch_get(NULL);
@@ -1064,6 +1084,7 @@ int cmd_rebase(int argc, const char **argv, const char *prefix)
 	int allow_preemptive_ff = 1;
 	int preserve_merges_selected = 0;
 	struct reset_head_opts ropts = { 0 };
+	int numrevs = -1;
 	struct option builtin_rebase_options[] = {
 		OPT_STRING(0, "onto", &options.onto_name,
 			   N_("revision"),
@@ -1175,6 +1196,8 @@ int cmd_rebase(int argc, const char **argv, const char *prefix)
 			 N_("automatically re-schedule any `exec` that fails")),
 		OPT_BOOL(0, "reapply-cherry-picks", &options.reapply_cherry_picks,
 			 N_("apply all changes, even those already present upstream")),
+		OPT_NUMBER_CALLBACK(&numrevs, N_("shortcut for rev~NUM, or HEAD~NUM"),
+			 numrevs_callback),
 		OPT_END(),
 	};
 	int i;
@@ -1569,21 +1592,33 @@ int cmd_rebase(int argc, const char **argv, const char *prefix)
 
 	if (!options.root) {
 		if (argc < 1) {
-			struct branch *branch;
+			if (numrevs > 0) {
+				strbuf_reset(&buf);
+				strbuf_addf(&buf, "HEAD~%d", numrevs + 1);
+				options.upstream_name = xstrdup(buf.buf);
+			} else {
+				struct branch *branch;
 
-			branch = branch_get(NULL);
-			options.upstream_name = branch_get_upstream(branch,
+				branch = branch_get(NULL);
+				options.upstream_name = branch_get_upstream(branch,
 								    NULL);
-			if (!options.upstream_name)
-				error_on_missing_default_upstream();
-			if (options.fork_point < 0)
-				options.fork_point = 1;
+				if (!options.upstream_name)
+					error_on_missing_default_upstream();
+				if (options.fork_point < 0)
+					options.fork_point = 1;
+			}
 		} else {
 			options.upstream_name = argv[0];
 			argc--;
 			argv++;
 			if (!strcmp(options.upstream_name, "-"))
 				options.upstream_name = "@{-1}";
+			else if (numrevs > 0) {
+				strbuf_reset(&buf);
+				strbuf_addf(&buf, "%s~%d", options.upstream_name,
+					    numrevs + 1);
+				options.upstream_name = xstrdup(buf.buf);
+			}
 		}
 		options.upstream =
 			lookup_commit_reference_by_name(options.upstream_name);
