@@ -43,6 +43,7 @@
 #include "tmp-objdir.h"
 #include "tree.h"
 #include "write-or-die.h"
+#include "run-command.h"
 
 #define MAIL_DEFAULT_WRAP 72
 #define COVER_FROM_AUTO_MAX_SUBJECT_LEN 100
@@ -964,6 +965,7 @@ static const char *signature = git_version_string;
 static const char *signature_file;
 static enum cover_setting config_cover_letter;
 static const char *config_output_directory;
+static const char *config_output_directory_cmd;
 static enum cover_from_description cover_from_description_mode = COVER_FROM_MESSAGE;
 static int show_notes;
 static struct display_notes_opt notes_opt;
@@ -1059,6 +1061,8 @@ static int git_format_config(const char *var, const char *value,
 	}
 	if (!strcmp(var, "format.outputdirectory"))
 		return git_config_string(&config_output_directory, var, value);
+	if (!strcmp(var, "format.outputdirectorycmd"))
+		return git_config_string(&config_output_directory_cmd, var, value);
 	if (!strcmp(var, "format.useautobase")) {
 		if (value && !strcasecmp(value, "whenAble")) {
 			auto_base = AUTO_BASE_WHEN_ABLE;
@@ -2157,8 +2161,23 @@ int cmd_format_patch(int argc, const char **argv, const char *prefix)
 	} else if (!rev.diffopt.close_file) {
 		int saved;
 
-		if (!output_directory)
+		if (!output_directory) {
+			if (!config_output_directory && config_output_directory_cmd) {
+				struct child_process cmd = CHILD_PROCESS_INIT;
+				struct strbuf buf = STRBUF_INIT;
+				int rc;
+
+				strvec_push(&cmd.args, config_output_directory_cmd);
+				cmd.use_shell = 1;
+				rc = capture_command(&cmd, &buf, PATH_MAX);
+				if (rc)
+					die(_("outputDirectoryCmd command failed: "
+					      "'%s'"), config_output_directory_cmd);
+				strbuf_setlen(&buf, strcspn(buf.buf, "\r\n"));
+				config_output_directory = strbuf_detach(&buf, NULL);
+			}
 			output_directory = config_output_directory;
+		}
 		output_directory = set_outdir(prefix, output_directory);
 
 		if (rev.diffopt.use_color != GIT_COLOR_ALWAYS)

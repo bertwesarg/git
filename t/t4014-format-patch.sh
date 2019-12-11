@@ -2125,6 +2125,32 @@ test_expect_success 'format-patch -o overrides format.outputDirectory' '
 	test_path_is_dir patchset
 '
 
+test_expect_success 'format-patch format.outputDirectoryCmd option' '
+	test_config format.outputDirectoryCmd "echo patches" &&
+	rm -fr patches &&
+	git format-patch main..side &&
+	count=$(git rev-list --count main..side) &&
+	ls patches >list &&
+	test_line_count = $count list
+'
+
+test_expect_success 'format-patch format.outputDirectory overrides format.outputDirectoryCmd' '
+	test_config format.outputDirectoryCmd "echo patches" &&
+	test_config format.outputDirectory patchset &&
+	rm -fr patches patchset &&
+	git format-patch main..side &&
+	test_path_is_missing patches &&
+	test_path_is_dir patchset
+'
+
+test_expect_success 'format-patch -o overrides format.outputDirectoryCmd' '
+	test_config format.outputDirectoryCmd "echo patches" &&
+	rm -fr patches patchset &&
+	git format-patch -o patchset main..side &&
+	test_path_is_missing patches &&
+	test_path_is_dir patchset
+'
+
 test_expect_success 'format-patch forbids multiple outputs' '
 	rm -fr outfile outdir &&
 	test_must_fail \
