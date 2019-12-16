@@ -130,6 +130,7 @@ struct rebase_options {
 	int config_autosquash;
 	int config_rebase_merges;
 	int config_update_refs;
+	int first_parent;
 };
 
 #define REBASE_OPTIONS_INIT {			  	\
@@ -330,6 +331,7 @@ static int run_sequencer_rebase(struct rebase_options *opts)
 	flags |= opts->root_with_onto ? TODO_LIST_ROOT_WITH_ONTO : 0;
 	flags |= opts->reapply_cherry_picks ? TODO_LIST_REAPPLY_CHERRY_PICKS : 0;
 	flags |= opts->flags & REBASE_NO_QUIET ? TODO_LIST_WARN_SKIPPED_CHERRY_PICKS : 0;
+	flags |= opts->first_parent ? TODO_LIST_FIRST_PARENT : 0;
 
 	switch (opts->action) {
 	case ACTION_NONE: {
@@ -1198,6 +1200,8 @@ int cmd_rebase(int argc, const char **argv, const char *prefix)
 			 N_("apply all changes, even those already present upstream")),
 		OPT_NUMBER_CALLBACK(&numrevs, N_("shortcut for rev~NUM, or HEAD~NUM"),
 			 numrevs_callback),
+		OPT_BOOL(0, "first-parent", &options.first_parent,
+			N_("folow first-parent")),
 		OPT_END(),
 	};
 	int i;

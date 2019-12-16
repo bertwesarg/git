@@ -5844,6 +5844,7 @@ int sequencer_make_script(struct repository *r, struct strbuf *out, int argc,
 	revs.right_only = 1;
 	revs.sort_order = REV_SORT_IN_GRAPH_ORDER;
 	revs.topo_order = 1;
+	revs.first_parent_only = !!(flags & TODO_LIST_FIRST_PARENT);
 
 	revs.pretty_given = 1;
 	git_config_get_string("rebase.instructionFormat", &format);
