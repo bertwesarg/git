@@ -46,6 +46,7 @@ rejoin        merge the new branch back into HEAD
  options for 'add' and 'merge' (also: 'pull', 'split --rejoin', and 'push --rejoin')
 squash        merge subtree changes as a single commit
 m,message!=   use the given message as the commit message for the merge commit
+force!       'add', even if directory exists in the work-tree
 "
 
 indent=0
@@ -171,6 +172,7 @@ main () {
 	arg_split_annotate=
 	arg_addmerge_squash=
 	arg_addmerge_message=
+	arg_add_force=
 	while test $# -gt 0
 	do
 		opt="$1"
@@ -240,6 +242,9 @@ main () {
 			test -n "$allow_addmerge" || die_incompatible_opt "$opt" "$arg_command"
 			arg_addmerge_squash=
 			;;
+		--force)
+			arg_add_force=1
+			;;
 		--)
 			break
 			;;
@@ -257,7 +262,7 @@ main () {
 
 	case "$arg_command" in
 	add)
-		test -e "$arg_prefix" &&
+		test -z "$arg_add_force" && test -e "$prefix" &&
 			die "fatal: prefix '$arg_prefix' already exists."
 		;;
 	*)

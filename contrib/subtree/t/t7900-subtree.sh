@@ -170,6 +170,37 @@ test_expect_success 'add subproj as subtree into sub dir/ with --squash and --pr
 	)
 '
 
+next_test
+test_expect_success 'add subproj as subtree into existing sub dir/ with --prefix' '
+	subtree_test_create_repo "$subtree_test_count" &&
+	subtree_test_create_repo "$subtree_test_count/sub proj" &&
+	test_create_commit "$subtree_test_count" main1 &&
+	test_create_commit "$subtree_test_count/sub proj" sub1 &&
+	mkdir "$subtree_test_count/sub dir" &&
+	echo unrelated1 >"$subtree_test_count/sub dir/unrelated1" &&
+	(
+		cd "$subtree_test_count" &&
+		git fetch ./"sub proj" master &&
+		test_must_fail git subtree add --prefix="sub dir" FETCH_HEAD
+	)
+'
+
+next_test
+test_expect_success 'add subproj as subtree into sub dir/ with --prefix and --force' '
+	subtree_test_create_repo "$subtree_test_count" &&
+	subtree_test_create_repo "$subtree_test_count/sub proj" &&
+	test_create_commit "$subtree_test_count" main1 &&
+	test_create_commit "$subtree_test_count/sub proj" sub1 &&
+	mkdir "$subtree_test_count/sub dir" &&
+	echo unrelated1 >"$subtree_test_count/sub dir/unrelated1" &&
+	(
+		cd "$subtree_test_count" &&
+		git fetch ./"sub proj" master &&
+		git subtree add --force --prefix="sub dir" FETCH_HEAD &&
+		check_equal "$(last_commit_message)" "Add '\''sub dir/'\'' from commit '\''$(git rev-parse FETCH_HEAD)'\''"
+	)
+'
+
 #
 # Tests for 'git subtree merge'
 #

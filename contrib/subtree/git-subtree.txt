@@ -74,7 +74,8 @@ add <repository> <remote-ref>::
 	A new commit is created	automatically, joining the imported
 	project's history with your own.  With '--squash', import
 	only a single commit from the subproject, rather than its
-	entire history.
+	entire history. With '--force', it also operates if <prefix>
+	already exists in the work-tree.
 
 merge <local-commit> [<repository>]::
 	Merge recent changes up to <local-commit> into the <prefix>
@@ -184,6 +185,12 @@ subproject.
 -m <message>::
 --message=<message>::
 	Specify <message> as the commit message for the merge commit.
+
+OPTIONS FOR add
+---------------
+--force::
+	Do not refuse to add the subtree, even if the <prefix> exists in the
+	work-tree.
 
 OPTIONS FOR 'split' (ALSO: 'push')
 ----------------------------------
