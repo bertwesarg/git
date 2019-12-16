@@ -46,6 +46,8 @@ MANPAGE_XSL   = ../../Documentation/manpage-normal.xsl
 
 GIT_SUBTREE_SH := git-subtree.sh
 GIT_SUBTREE    := git-subtree
+GIT_SUBTREE_REBASE_FILTER_SH := git-subtree--rebase-filter.sh
+GIT_SUBTREE_REBASE_FILTER    := git-subtree--rebase-filter
 
 GIT_SUBTREE_DOC := git-subtree.1
 GIT_SUBTREE_XML := git-subtree.xml
@@ -55,7 +57,11 @@ GIT_SUBTREE_TEST := ../../git-subtree
 
 all:: $(GIT_SUBTREE)
 
-$(GIT_SUBTREE): $(GIT_SUBTREE_SH)
+$(GIT_SUBTREE): $(GIT_SUBTREE_SH) $(GIT_SUBTREE_REBASE_FILTER_SH)
+	sed -e '1s|#!.*/sh|#!$(SHELL_PATH_SQ)|' $< >$@
+	chmod +x $@
+
+$(GIT_SUBTREE_REBASE_FILTER_SH): $(GIT_SUBTREE_REBASE_FILTER_SH)
 	sed -e '1s|#!.*/sh|#!$(SHELL_PATH_SQ)|' $< >$@
 	chmod +x $@
 
@@ -65,9 +71,10 @@ man: $(GIT_SUBTREE_DOC)
 
 html: $(GIT_SUBTREE_HTML)
 
-install: $(GIT_SUBTREE)
+install: $(GIT_SUBTREE) $(GIT_SUBTREE_REBASE_FILTER)
 	$(INSTALL) -d -m 755 $(DESTDIR)$(gitexecdir)
-	$(INSTALL) -m 755 $(GIT_SUBTREE) $(DESTDIR)$(gitexecdir)
+	$(INSTALL) -m 755 $(GIT_SUBTREE)               $(DESTDIR)$(gitexecdir)
+	$(INSTALL) -m 755 $(GIT_SUBTREE_REBASE_FILTER) $(DESTDIR)$(gitexecdir)
 
 install-doc: install-man install-html
 
@@ -97,7 +104,7 @@ test: $(GIT_SUBTREE_TEST)
 	$(MAKE) -C t/ test
 
 clean:
-	$(RM) $(GIT_SUBTREE)
+	$(RM) $(GIT_SUBTREE) $(GIT_SUBTREE_REBASE_FILTER)
 	$(RM) *.xml *.html *.1
 
 .PHONY: FORCE

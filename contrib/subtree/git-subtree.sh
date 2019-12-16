@@ -32,6 +32,7 @@ git subtree merge --prefix=<prefix> <commit>
 git subtree split --prefix=<prefix> [<commit>]
 git subtree pull  --prefix=<prefix> <repository> <ref>
 git subtree push  --prefix=<prefix> <repository> <refspec>
+git subtree rebase <rebase-options>
 --
 h,help!       show the help
 q,quiet!      quiet
@@ -48,6 +49,9 @@ squash        merge subtree changes as a single commit
 m,message!=   use the given message as the commit message for the merge commit
 force!       'add', even if directory exists in the work-tree
 "
+
+basedir=${0%/*}
+: ${basedir:=.}
 
 indent=0
 
@@ -1134,4 +1138,26 @@ cmd_push () {
 	fi
 }
 
-main "$@"
+cmd_rebase () {
+	SUBTREE_REBASE_ORIG_EDITOR=$(
+		if test -z "$GIT_SEQUENCE_EDITOR"
+		then
+			GIT_SEQUENCE_EDITOR="$(git config sequence.editor)" || :
+			if [ -z "$GIT_SEQUENCE_EDITOR" ]
+			then
+				GIT_SEQUENCE_EDITOR="$(git var GIT_EDITOR)" || :
+			fi
+		fi
+		echo "$GIT_SEQUENCE_EDITOR"
+	) \
+	GIT_SEQUENCE_EDITOR=$basedir/git-subtree--rebase-filter.sh \
+	exec git rebase --interactive --first-parent --rebase-merges "$@"
+}
+
+if test "$1" = "rebase"
+then
+	shift
+	cmd_rebase "$@"
+else
+	main "$@"
+fi
